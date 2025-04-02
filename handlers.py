@@ -9,7 +9,10 @@ router = Router()
 
 @router.message(CommandStart())
 async def start_handler(message: Message):
-    await message.answer(f"Привет, {message.chat.first_name}! Чтобы создать пользователя введите /add_user")
+    await message.answer(f"Привет, {message.chat.first_name}!"
+                         f"\nЧтобы создать пользователя введите /add_user"
+                         f"\nЧтобы зарегистрироваться введите /register"
+                         f"\nЧтобы посмотреть список пользователей введите /list_users", reply_markup=kb.main)
 
 @router.message(Command('register'))
 async def register_handler(message: Message):
@@ -24,26 +27,20 @@ async def register_handler(message: Message):
 async def register_handler(message: Message):
     await rq.list_users(message)
 
-#
-# router.message(Command('register'))
-# async def register_handler(message: Message):
-#     await rq.register_users(message)
-#
-
 
 @router.message(F.text == 'Пользователи')
 async def users(message: Message):
-    await message.answer(f'Ваши пользователи', reply_markup= await kb.users())
-#
-@router.callback_query(F.data.starswith('users_'))
-async def users(callback: CallbackQuery):
-    # users_name = ['Илья', 'Pupa']
-    # await callback.answer(f'Пользователи:')
-    await callback.message.answer('Выберите пользователя', reply_markup= await kb.users(callback.data.split('_')[1]))
+    await message.answer(f'Выбери работника', reply_markup= await kb.users())
 
 
 
+@router.callback_query(F.data.startswith('user_'))
+async def user(callback: CallbackQuery):
+    work_time_data = await rq.get_work_time(int(callback.data.split('_')[1]))
+    await callback.answer(f'Вы выбрали пользователя:')
+    if work_time_data != []:
+        await callback.message.answer(f'Время работы',
+                                      reply_markup= await kb.work_times(int(callback.data.split('_')[1])))
+    else:
+        await callback.message.answer('У пользователя нет графика')
 
-# @router.message(Command(['register']))
-# async def handle_get_users(message: types.Message):
-#     await get_users(message)

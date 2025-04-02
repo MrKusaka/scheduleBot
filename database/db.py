@@ -25,6 +25,7 @@ class WorkTime(Base):
     __tablename__ = "work_time"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    day = Column(String, nullable=True)
     work_start = Column(Time, nullable=True)
     work_end = Column(Time, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

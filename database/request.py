@@ -1,5 +1,6 @@
 from aiogram import types
 from aiogram.types import message
+from sqlalchemy.exc import IntegrityError
 
 from config import ADMIN_ID
 from database.db import User, WorkTime, async_session_maker
@@ -7,15 +8,17 @@ from sqlalchemy import select, insert, update, delete
 
 async def register_users(message: types.Message):
     async with async_session_maker() as session:
-
-        user = User(
-            user_id=message.from_user.id,
-            first_name=message.from_user.first_name,
-            last_name=message.from_user.last_name
-        )
-        session.add(user)
-        await session.commit()
-        await message.reply("Вы успешно зарегистрированы!")
+        try:
+            user = User(
+                user_id=message.from_user.id,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name
+            )
+            session.add(user)
+            await session.commit()
+            await message.reply("Вы успешно зарегистрированы!")
+        except IntegrityError:
+            await message.reply("Вы уже зарегистрированы")
         # return result
 
 
@@ -35,13 +38,13 @@ async def add_user(message: types.Message):
 
         await message.reply(f"Пользователь {first_name} успешно добавлен.")
     except ValueError:
-        await message.reply("Используйте формат: /add_user user_id username full_name")
+        await message.reply("Используйте формат: /add_user user_id first_name last_name")
 
 
 async def list_users(message: types.Message):
-    if message.from_user.id != ADMIN_ID:
-        await message.reply("У вас нет прав для выполнения этой команды.")
-        return
+    # if message.from_user.id != ADMIN_ID:
+        # return await message.reply("У вас нет прав для выполнения этой команды.")
+
 
     async with async_session_maker() as session:
         stmt = select(User)
@@ -59,3 +62,9 @@ async def get_users():
     async with async_session_maker() as session:
         result = await session.scalars(select(User))
         return result
+
+
+async def get_work_time(user_id):
+    async with async_session_maker() as session:
+        result = await session.scalars(select(WorkTime).where(WorkTime.user_id == user_id))
+        return result.all()
