@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import Column, Integer, BigInteger, String, Time, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Time, Date, ForeignKey, BigInteger
 
 from config import DATABASE_URL
 
@@ -25,10 +25,11 @@ class WorkTime(Base):
     __tablename__ = "work_time"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False)
     day = Column(String, nullable=True)
     work_start = Column(Time, nullable=True)
     work_end = Column(Time, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
 
 
 # Создание таблиц
