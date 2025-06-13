@@ -75,6 +75,12 @@ async def get_users():
         return result
 
 
+async def get_user(user_id: int):
+    async with async_session_maker() as session:
+        result = await session.scalar(select(User).where(User.user_id == user_id))
+        return result
+
+
 async def get_work_time(user_id):
     async with async_session_maker() as session:
         result = await session.scalars(select(WorkTime).where(WorkTime.user_id == user_id))
@@ -131,3 +137,8 @@ async def add_work_schedule(**kwargs):
     except Exception as e:
         print(f"Ошибка при добавлении графика: {e}")
         return False
+
+# async def get_schedule_from_user(user_id):
+#     async with async_session_maker() as session:
+#         result = await session.scalars(select(WorkTime).where(WorkTime.user_id == user_id))
+#         return result.all()
