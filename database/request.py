@@ -124,6 +124,7 @@ async def add_work_schedule(**kwargs):
 
             schedule = WorkTime(
                 user_id=kwargs['user_id'],
+                date=kwargs['date'],
                 day=kwargs['day'],
                 work_start=kwargs['work_start'],
                 work_end=kwargs['work_end']

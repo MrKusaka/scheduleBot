@@ -54,6 +54,7 @@ def get_days_keyboard():
     builder.adjust(2)
     return builder.as_markup()
 
+# определенные часы
 def get_hours_keyboard():
     hours = ['07:00', '09:00', '10:00', '12:00', '15:00', '16:00', '18:00', '19:00', '21:00', '00:00']
     builder = InlineKeyboardBuilder()
@@ -61,6 +62,16 @@ def get_hours_keyboard():
         builder.add(InlineKeyboardButton(text=hour, callback_data=f"hour_{hour}"))
     builder.adjust(5)
     return builder.as_markup()
+
+# более широкий выбор времени
+# def get_hours_keyboard():
+#     builder = InlineKeyboardBuilder()
+#     for hour in range(0, 24):
+#         for minute in [0, 30]:
+#             time_str = f"{hour:02d}:{minute:02d}"
+#             builder.button(text=time_str, callback_data=f"hour_{time_str}")
+#     builder.adjust(4)  # 4 кнопки в ряд
+#     return builder.as_markup()
 
 def get_employees_keyboard(users, mode):
     builder = InlineKeyboardBuilder()
@@ -76,7 +87,8 @@ async def work_times(users):
     users_kb = InlineKeyboardBuilder()
     # all_work_times = await get_work_time(user_id)
     for user in users:
-        day = str(user.day)
+        date = str(user.date)
+        day = user.day
         time_range = f'{user.work_start.strftime('%H:%M')} - {user.work_end.strftime('%H:%M')}'
-        users_kb.row(InlineKeyboardButton(text=f'{day}: {time_range}', callback_data=f'work_time_{user.id}'))
+        users_kb.row(InlineKeyboardButton(text=f'{date}, {day}: {time_range}', callback_data=f'work_time_{user.id}'))
     return users_kb.adjust(3).as_markup()

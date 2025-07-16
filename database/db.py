@@ -26,6 +26,7 @@ class WorkTime(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.user_id"), nullable=False)
+    date = Column(Date, nullable=True)
     day = Column(String, nullable=True)
     work_start = Column(Time, nullable=True)
     work_end = Column(Time, nullable=True)
