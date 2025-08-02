@@ -143,3 +143,36 @@ async def add_work_schedule(**kwargs):
 #     async with async_session_maker() as session:
 #         result = await session.scalars(select(WorkTime).where(WorkTime.user_id == user_id))
 #         return result.all()
+
+
+async def update_work_time(**kwargs):
+    work_time_id = kwargs.get('work_time_id')
+    if not work_time_id:
+        print("❌ Не передан work_time_id")
+        return False
+
+    try:
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(WorkTime).where(WorkTime.id == work_time_id)
+            )
+            schedule = result.scalar_one_or_none()
+
+            if not schedule:
+                print(f"❌ Смена {work_time_id} не найдена")
+                return False
+
+            schedule.user_id = kwargs['user_id']
+            schedule.date = kwargs['date']
+            schedule.day = kwargs['day']
+            schedule.work_start = kwargs['work_start']
+            schedule.work_end = kwargs['work_end']
+
+            await session.commit()
+            print(f"✅ Смена {work_time_id} обновлена: {schedule.date}")
+            return True
+
+    except Exception as e:
+        print(f"❌ Ошибка при обновлении: {e}")
+        await session.rollback()
+        return False

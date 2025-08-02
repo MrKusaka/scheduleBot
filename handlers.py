@@ -2,6 +2,7 @@ from aiogram import types, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart, Command, StateFilter
+from sqlalchemy.testing.suite.test_reflection import users
 
 import keyboards as kb
 import database.request as rq
@@ -36,7 +37,7 @@ async def select_employee(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.callback_query(SimpleCalendarCallback.filter())
+@router.callback_query(StateFilter("waiting_for_date"),SimpleCalendarCallback.filter())
 async def process_calendar(callback: CallbackQuery, callback_data: dict, state: FSMContext):
     calendar = SimpleCalendar()
     selected, date = await calendar.process_selection(callback, callback_data)
@@ -98,103 +99,18 @@ async def process_work_end(callback: CallbackQuery, state: FSMContext):
 
 
     print('DATA22222', full_data)
-
-    # Здесь вызов функции добавления графика в БД
-    # await rq.add_work_schedule(**full_data)  # Замени на свою реализацию
-
-    # user = await rq.get_user(full_data['user_id'])
     date_str = full_data['date'].strftime("%d.%m.%Y")
-    # await callback.message.edit_text(f"График для {user.first_name} на {date_str} успешно добавлен!")
-    # await state.clear()
-    # await callback.answer()
     user = await rq.get_user(data['user_id'])
     all_work_time= await rq.get_work_time(data['user_id'])
     for work_time in all_work_time:
         if work_time.date == full_data['date']:
             await callback.message.answer(f"График для {user.first_name} на {date_str} уже существует")
-            break
+            await state.clear()  # Очищаем состояние
+            return
 
-        else:
-
-            await rq.add_work_schedule(**full_data)
-
-            print('USEEEEEEEEEEEER', user)
-
-            print('ВРЕМЯЯЯЯ', work_time.user_id)
-            await callback.message.answer(f"График для {user.first_name} на {date_str} успешно добавлен!")
-            break
-            await state.clear()
-
-
-# @router.callback_query(F.data.startswith("day_"))
-# async def select_day(callback: CallbackQuery, state: FSMContext):
-#     day = callback.data.split("_")[1]
-#     await state.update_data(day=day)
-#     await callback.message.answer("Введите время начала:", reply_markup=kb.get_hours_keyboard())
-#     await callback.answer()
-
-# router.callback_query(F.data.startswith("hour_"))
-# async def select_day(callback: CallbackQuery, state: FSMContext):
-#     day = callback.data.split("_")[1]
-#     await state.update_data(day=day)
-#     await callback.message.answer("Введите время начала:", reply_markup=kb.get_hours_keyboard)
-#     await callback.answer()
-
-# @router.callback_query(F.data.startswith("hour_"))
-# async def process_time(callback: CallbackQuery, state: FSMContext):
-#     data = await state.get_data()
-#     print(data)
-#
-#     if 'work_start' not in data:
-#         try:
-#             print(callback.data)
-#             work_start = datetime.strptime(callback.data.replace('hour_', ''), "%H:%M").time()
-#
-#             await state.update_data(work_start=work_start)
-#             await callback.message.answer("Введите время окончания:", reply_markup=kb.get_hours_keyboard())
-#         except ValueError:
-#             await callback.message.answer("Неверный формат времени. Попробуйте снова.")
-#     else:
-#         try:
-#             work_end = datetime.strptime(callback.data.replace('hour_', ''), "%H:%M").time()
-#             work_start = data['work_start']
-#             if work_end <= work_start and work_end != time(0, 0):
-#                 await callback.message.answer(
-#                     "Время окончания должно быть позже времени начала (кроме 00:00). "
-#                     "Попробуйте снова."
-#                 )
-#                 return
-#             else:
-#                 await state.update_data(work_end=work_end)
-#                 data = await state.get_data()
-#
-#             await rq.add_work_schedule(**data)
-#             user = await rq.get_user(data['user_id'])
-#             await callback.message.answer(f"График для {user.first_name} успешно добавлен!")
-#             await state.clear()
-#             # Очищаем состояние
-#         except ValueError:
-#             await callback.message.answer("Неверный формат времени. Попробуйте снова.")
-            #
-            # # Создаем событие в Google Calendar
-            # user = await get_users(data['user_id'])
-            # start_datetime = datetime.combine(datetime.today(), data['work_start'])
-            # end_datetime = datetime.combine(datetime.today(), work_end)
-            #
-            # event_id = await calendar.create_event(
-            #     user.full_name,
-            #     start_datetime,
-            #     end_datetime,
-            #     f"Рабочая смена {user.position}"
-            # )
-
-            # # Обновляем запись в БД с ID события
-            # await update_work_schedule(schedule_id, google_event_id=event_id)
-
-            # await message.answer("График успешно добавлен!")
-        #     await state.clear()
-        # except ValueError:
-        #     await message.answer("Неверный формат времени. Попробуйте снова.")
+    await rq.add_work_schedule(**full_data)
+    await callback.message.answer(f"График для {user.first_name} на {date_str} успешно добавлен!")
+    await state.clear()
 
 
 @router.message(CommandStart())
@@ -217,24 +133,6 @@ async def register_handler(message: Message):
 async def register_handler(message: Message):
     await rq.list_users(message)
 
-
-# @router.message(F.text == 'Пользователи')
-# async def users(message: Message):
-#     await message.answer(f'Выбери работника', reply_markup= await kb.users())
-
-
-# @router.callback_query(F.data.startswith('user_'))
-# async def user(callback: CallbackQuery):
-#     work_time_data = await rq.get_work_time(int(callback.data.split('_')[1]))
-#     await callback.answer(f'Вы выбрали пользователя:')
-#     if work_time_data != []:
-#         await callback.message.answer(f'Время работы',
-#                                       reply_markup= await kb.work_times(int(callback.data.split('_')[1])))
-#     else:
-#         await callback.message.answer('У пользователя нет графика')
-#
-#
-#
 @router.message(F.text == 'Рабочее время')
 async def set_schedule(message: types.Message):
     users = await rq.get_users()
@@ -244,13 +142,15 @@ async def set_schedule(message: types.Message):
     )
 
 @router.callback_query(F.data.startswith("view_user_"))
-async def get_schedule(callback: CallbackQuery):
+async def get_schedule(callback: CallbackQuery, state: FSMContext):
     print(await rq.get_work_time(int(callback.data.split("_")[2])))
-    work_time_data = await rq.get_work_time(int(callback.data.split("_")[2]))
+    user_id = int(callback.data.split("_")[2])
+    work_time_data = await rq.get_work_time(user_id)
+    await state.update_data(schedules=work_time_data, user_id=user_id)
     print(work_time_data)
     await callback.answer(f'Вы выбрали пользователя:')
     if work_time_data != []:
-        await callback.message.answer(f'Время работы',
+        await callback.message.answer(f'Время работы работника',
                                       reply_markup=await kb.work_times(work_time_data))
     else:
         await callback.message.answer('У пользователя нет графика')
@@ -286,3 +186,84 @@ async def get_schedule(callback: CallbackQuery):
 #         await message.answer(format_schedule(schedules))
 #     finally:
 #         conn.close()
+
+@router.callback_query(F.data.startswith("work_time_"))
+async def edit_work_time(callback: CallbackQuery, state: FSMContext):
+    work_time_id = int(callback.data.split("_")[2])
+    data = await state.get_data()
+    schedules = data.get("schedules", [])
+
+    # Находим смену по ID
+    work_time = next((s for s in schedules if s.id == work_time_id), None)
+
+    if not work_time:
+        await callback.message.answer("Смена не найдена.")
+        await callback.answer()
+        return
+
+    # Сохраняем ID смены
+    await state.update_data(work_time_id=work_time_id)
+
+    await callback.message.answer(
+        f"🔧 Редактирование смены:\n"
+        f"Дата: {work_time.date.strftime('%d.%m.%Y')}\n"
+        f"Время: {work_time.work_start.strftime('%H:%M')} – {work_time.work_end.strftime('%H:%M')}\n\n"
+        f"Выберите новую дату:",
+        reply_markup=await SimpleCalendar().start_calendar()
+    )
+    await state.set_state('waiting_for_new_date')
+    await callback.answer()
+
+@router.callback_query(StateFilter('waiting_for_new_date'), SimpleCalendarCallback.filter())
+async def edit_date(callback: CallbackQuery, callback_data, state: FSMContext):
+    calendar = SimpleCalendar()
+    selected, date = await calendar.process_selection(callback, callback_data)
+
+    if selected:
+        await state.update_data(new_date=date.date())
+        await callback.message.answer("Выберите новое время начала:", reply_markup=kb.get_hours_keyboard())
+        await state.set_state('waiting_for_new_start_time')
+
+@router.callback_query(StateFilter('waiting_for_new_start_time'), F.data.startswith("hour_"))
+async def edit_start_time(callback: CallbackQuery, state: FSMContext):
+    new_start = datetime.strptime(callback.data.replace("hour_", ""), "%H:%M").time()
+    await state.update_data(new_start=new_start)
+    await callback.message.answer("Выберите новое время окончания:", reply_markup=kb.get_hours_keyboard())
+    await state.set_state('waiting_for_new_end_time')
+    await callback.answer()
+
+@router.callback_query(StateFilter('waiting_for_new_end_time'), F.data.startswith("hour_"))
+async def edit_end_time(callback: CallbackQuery, state: FSMContext):
+    print('NYJNOE IISHKEE', await state.get_data())
+    try:
+        data = await state.get_data()
+        work_time_id = data.get("work_time_id")
+        new_end_str = callback.data.replace("hour_", "")
+        new_end = datetime.strptime(new_end_str, "%H:%M").time()
+        new_start = data["new_start"]
+
+        if new_end <= new_start and new_end != time(0, 0):
+            await callback.message.answer("Время окончания должно быть позже начала (кроме 00:00).")
+            return
+        # Формируем данные для обновления
+        update_data = {
+            'work_time_id': work_time_id,
+            'user_id': data['user_id'],
+            'date': data['new_date'],
+            'day': data['new_date'].strftime("%a"),  # или кастомный список ["ПН", ...]
+            'work_start': new_start,
+            'work_end': new_end
+        }
+
+        success = await rq.update_work_time(**update_data)
+        if success:
+            await callback.message.answer("✅ Смена успешно обновлена!")
+        else:
+            await callback.message.answer("❌ Ошибка при обновлении смены.")
+        await state.clear()
+        await callback.answer()
+
+    except Exception as e:
+        await callback.message.answer(f"Ошибка: {e}")
+        await state.clear()
+        await callback.answer()
